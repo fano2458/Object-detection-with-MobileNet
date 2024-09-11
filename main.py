@@ -80,17 +80,18 @@ class OpenDataset(torch.utils.data.Dataset):
         return len(self.image_infos)
     
 
-trn_ids, val_ids = train_test_split(df.ImageID.unique(), test_size=0.1, random_state=99)
+trn_ids, _ = train_test_split(df.ImageID.unique(), train_size=0.1, random_state=99)
+trn_ids, val_ids = train_test_split(trn_ids, train_size=0.7, random_state=99)
 trn_df, val_df = df[df['ImageID'].isin(trn_ids)], df[df['ImageID'].isin(val_ids)]
-len(trn_df), len(val_df)
+print(len(trn_df), len(val_df))
 
 
 train_ds = OpenDataset(trn_df)
 test_ds = OpenDataset(val_df)
 
 
-train_loader = DataLoader(train_ds, batch_size=32, collate_fn=train_ds.collate_fn, drop_last=True)
-test_loader = DataLoader(test_ds, batch_size=32, collate_fn=test_ds.collate_fn, drop_last=True)
+train_loader = DataLoader(train_ds, batch_size=8, collate_fn=train_ds.collate_fn, drop_last=True, shuffle=True, pin_memory=False)
+test_loader = DataLoader(test_ds, batch_size=8, collate_fn=test_ds.collate_fn, drop_last=True, shuffle=False, pin_memory=False)
 
 def train_batch(inputs, model, criterion, optimizer):
     model.train()
@@ -115,7 +116,7 @@ def validate_batch(inputs, model, criterion):
 from src.mobilenet_ssd import MultiBoxLoss, MobileNetSSD
 from src.detect import *
 
-n_epochs = 3
+n_epochs = 10
 
 model = MobileNetSSD(num_classes).cuda()
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)

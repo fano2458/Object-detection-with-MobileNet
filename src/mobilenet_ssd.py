@@ -17,18 +17,18 @@ class MobileNetSSD(nn.Module):
         self.n_classes = n_classes
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        self.base_model = models.mobilenet_v3_small().features
-        self.conv1_1 = nn.Conv2d(576, 256, kernel_size=1, padding=0) 
-        self.conv1_2 = nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1)
+        self.base_model = models.mobilenet_v3_large(models.MobileNet_V3_Large_Weights.DEFAULT).features
+        self.conv1_1 = nn.Conv2d(960, 512, kernel_size=1, padding=0) 
+        self.conv1_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1)
 
-        self.conv2_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0)
-        self.conv2_2 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
+        self.conv2_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0)
+        self.conv2_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1)
 
-        self.conv3_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0)
-        self.conv3_2 = nn.Conv2d(128, 256, kernel_size=3, padding=0)
+        self.conv3_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0)
+        self.conv3_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0)
 
-        self.conv4_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0)
-        self.conv4_2 = nn.Conv2d(128, 256, kernel_size=3, padding=0)
+        self.conv4_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0)
+        self.conv4_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0)
 
         n_boxes = {'base': 4,
                    'conv1': 6,
@@ -38,26 +38,27 @@ class MobileNetSSD(nn.Module):
                    }
 
         # Localization prediction convolutions (predict offsets w.r.t prior-boxes)
-        self.loc_base = nn.Conv2d(576, n_boxes['base'] * 4, kernel_size=3, padding=1)
+        self.loc_base = nn.Conv2d(960, n_boxes['base'] * 4, kernel_size=3, padding=1)
         self.loc_conv1 = nn.Conv2d(256, n_boxes['conv1'] * 4, kernel_size=3, padding=1)
         self.loc_conv2 = nn.Conv2d(256, n_boxes['conv2'] * 4, kernel_size=3, padding=1)
         self.loc_conv3 = nn.Conv2d(256, n_boxes['conv3'] * 4, kernel_size=3, padding=1)
         self.loc_conv4 = nn.Conv2d(256, n_boxes['conv4'] * 4, kernel_size=3, padding=1)
 
         # Class prediction convolutions (predict classes in localization boxes)
-        self.cl_base = nn.Conv2d(576, n_boxes['base'] * n_classes, kernel_size=3, padding=1)
+        self.cl_base = nn.Conv2d(960, n_boxes['base'] * n_classes, kernel_size=3, padding=1)
         self.cl_conv1 = nn.Conv2d(256, n_boxes['conv1'] * n_classes, kernel_size=3, padding=1)
         self.cl_conv2 = nn.Conv2d(256, n_boxes['conv2'] * n_classes, kernel_size=3, padding=1)
         self.cl_conv3 = nn.Conv2d(256, n_boxes['conv3'] * n_classes, kernel_size=3, padding=1)
         self.cl_conv4 = nn.Conv2d(256, n_boxes['conv4'] * n_classes, kernel_size=3, padding=1)
 
         self.priors_cxcy = self.create_prior_boxes()
+        # print(self.priors_cxcy.shape)
 
 
     def forward(self, x):
         batch_size = x.shape[0]
         # TODO consider different activations
-        x = self.base_model(x)                      # (B, 576, 20, 20)
+        x = self.base_model(x)                      # (B, 960, 20, 20)
         base_feats = x
 
         x = F.relu(self.conv1_1(x))                 # (B, 256, 20, 20)
