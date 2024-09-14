@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 
 import numpy as np
 import os
+import math
 import glob
 from tqdm import tqdm
 
@@ -80,15 +81,14 @@ class OpenDataset(torch.utils.data.Dataset):
         return len(self.image_infos)
     
 
-trn_ids, _ = train_test_split(df.ImageID.unique(), train_size=0.1, random_state=99)
-trn_ids, val_ids = train_test_split(trn_ids, train_size=0.7, random_state=99)
+trn_ids, val_ids = train_test_split(df.ImageID.unique(), test_size=0.9, random_state=99)
+trn_ids, val_ids = train_test_split(trn_ids, train_size=0.8, random_state=99)
 trn_df, val_df = df[df['ImageID'].isin(trn_ids)], df[df['ImageID'].isin(val_ids)]
 print(len(trn_df), len(val_df))
 
 
 train_ds = OpenDataset(trn_df)
 test_ds = OpenDataset(val_df)
-
 
 train_loader = DataLoader(train_ds, batch_size=8, collate_fn=train_ds.collate_fn, drop_last=True, shuffle=True, pin_memory=False)
 test_loader = DataLoader(test_ds, batch_size=8, collate_fn=test_ds.collate_fn, drop_last=True, shuffle=False, pin_memory=False)
@@ -113,16 +113,29 @@ def validate_batch(inputs, model, criterion):
     return loss
 
 
-from src.mobilenet_ssd import MultiBoxLoss, MobileNetSSD
+from src.mobilenet_ssd import MultiBoxLoss , MobileNetSSD
+# from src.vgg_ssd import SSD640 as MobileNetSSD
 from src.detect import *
 
-n_epochs = 10
+# def adjust_learning_rate(optimizer, epoch, warmup=True, warmup_ep=0, enable_cos=True):
+#     lr = 3e-4
+#     if warmup and epoch < warmup_ep:
+#         lr = lr / (warmup_ep - epoch)
+#     elif enable_cos:
+#         lr *= 0.5 * (1. + math.cos(math.pi * (epoch - warmup_ep) / (15 - warmup_ep)))
+
+#     for param_group in optimizer.param_groups:
+#         param_group['lr'] = lr
+
+
+n_epochs = 15
 
 model = MobileNetSSD(num_classes).cuda()
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-5)
 criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy, device=device)
 
 for epoch in range(n_epochs):
+    # adjust_learning_rate(optimizer=optimizer, epoch=epoch)
     _n = len(train_loader)
     for inputs in tqdm(train_loader):
         loss = train_batch(inputs, model, criterion, optimizer)

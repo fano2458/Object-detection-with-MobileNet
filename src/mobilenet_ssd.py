@@ -18,17 +18,25 @@ class MobileNetSSD(nn.Module):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.base_model = models.mobilenet_v3_large(models.MobileNet_V3_Large_Weights.DEFAULT).features
-        self.conv1_1 = nn.Conv2d(960, 512, kernel_size=1, padding=0) 
-        self.conv1_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1)
+        self.conv1_1 = nn.Conv2d(960, 512, kernel_size=1, padding=0, bias=False) 
+        self.bn1_1 = nn.BatchNorm2d(512)
+        self.conv1_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1, bias=False)
+        self.bn1_2 = nn.BatchNorm2d(256)
 
-        self.conv2_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0)
-        self.conv2_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1)
+        self.conv2_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0, bias=False)
+        self.bn2_1 = nn.BatchNorm2d(512)
+        self.conv2_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1, bias=False)
+        self.bn2_2 = nn.BatchNorm2d(256)
 
-        self.conv3_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0)
-        self.conv3_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0)
+        self.conv3_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0, bias=False)
+        self.bn3_1 = nn.BatchNorm2d(512)
+        self.conv3_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0, bias=False)
+        self.bn3_2 = nn.BatchNorm2d(256)
 
-        self.conv4_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0)
-        self.conv4_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0)
+        self.conv4_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0, bias=False)
+        self.bn4_1 = nn.BatchNorm2d(512)
+        self.conv4_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0, bias=False)
+        self.bn4_2 = nn.BatchNorm2d(256)
 
         n_boxes = {'base': 4,
                    'conv1': 6,
@@ -61,20 +69,20 @@ class MobileNetSSD(nn.Module):
         x = self.base_model(x)                      # (B, 960, 20, 20)
         base_feats = x
 
-        x = F.relu(self.conv1_1(x))                 # (B, 256, 20, 20)
-        x = F.relu(self.conv1_2(x))                 # (B, 256, 10, 10)
+        x = F.relu(self.bn1_1(self.conv1_1(x)))                 # (B, 256, 20, 20)
+        x = F.relu(self.bn1_2(self.conv1_2(x)))                 # (B, 256, 10, 10)
         conv1_feats = x
 
-        x = F.relu(self.conv2_1(x))                 # (B, 128, 10, 10)
-        x = F.relu(self.conv2_2(x))                 # (B, 256, 5, 5)
+        x = F.relu(self.bn2_1(self.conv2_1(x)))                 # (B, 128, 10, 10)
+        x = F.relu(self.bn2_2(self.conv2_2(x)))                 # (B, 256, 5, 5)
         conv2_feats = x
 
-        x = F.relu(self.conv3_1(x))                 # (B, 128, 5, 5)
-        x = F.relu(self.conv3_2(x))                 # (B, 256, 3, 3)
+        x = F.relu(self.bn3_1(self.conv3_1(x)))                 # (B, 128, 5, 5)
+        x = F.relu(self.bn3_2(self.conv3_2(x)))                 # (B, 256, 3, 3)
         conv3_feats = x
 
-        x = F.relu(self.conv4_1(x))                 # (B, 128, 3, 3)
-        x = F.relu(self.conv4_2(x))                 # (B, 256, 1, 1)
+        x = F.relu(self.bn4_1(self.conv4_1(x)))                 # (B, 128, 3, 3)
+        x = F.relu(self.bn4_2(self.conv4_2(x)))                 # (B, 256, 1, 1)
         conv4_feats = x
 
         # locations
