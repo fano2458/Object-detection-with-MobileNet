@@ -86,7 +86,7 @@ def get_model(num_classes=None):
 model = get_model()
 
 # read the image
-image = Image.open("/home/fano/Desktop/CSCI 494/final_project/Object-detection-with-MobileNet/dataset/open-images-bus-trucks/images/0a7fdbbd74c42e18.jpg")
+image = Image.open("/home/fano/Desktop/CSCI 494/final_project/Object-detection-with-MobileNet/datasets/open-images-bus-trucks/images/0a7fdbbd74c42e18.jpg")
 # detect outputs
 boxes, classes, labels = predict(image, model, device, 0.5) # threshold
 # draw bounding boxes
