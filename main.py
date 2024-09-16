@@ -77,6 +77,7 @@ class OpenDataset(torch.utils.data.Dataset):
             labels.append(torch.tensor([label2target[c] for c in image_labels]).long().to(device))
         images = torch.cat(images).to(device)
         return images, boxes, labels
+    
     def __len__(self):
         return len(self.image_infos)
     
