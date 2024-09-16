@@ -59,6 +59,14 @@ class OpenDataset(torch.utils.data.Dataset):
         data[:,[0,2]] *= self.w
         data[:,[1,3]] *= self.h
         boxes = data.astype(np.uint32).tolist() # convert to absolute coordinates
+
+        # print(type(img), type(boxes), type(labels))
+        # print(img)
+        # print(boxes)
+        # print(labels)
+        # print(img.shape) (W, H, 3)
+        # np.array, list, list
+        # image, [[x1, y1, x2, y2], [x1, y1, x2, y2]], ['Class_name']
         return img, boxes, labels
 
     def collate_fn(self, batch):
@@ -75,3 +83,18 @@ class OpenDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.image_infos)
     
+
+
+
+if __name__ == "__main__":
+    from sklearn.model_selection import train_test_split
+
+    trn_ids, val_ids = train_test_split(df.ImageID.unique(), test_size=0.2, random_state=99)
+    # trn_ids, val_ids = train_test_split(trn_ids, train_size=0.8, random_state=99)
+    trn_df, val_df = df[df['ImageID'].isin(trn_ids)], df[df['ImageID'].isin(val_ids)]
+    print(len(trn_df), len(val_df))
+
+    train_ds = OpenDataset(trn_df, IMAGE_ROOT)
+    test_ds = OpenDataset(val_df, IMAGE_ROOT)
+
+    print(train_ds[0])
