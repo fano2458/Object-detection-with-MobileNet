@@ -88,6 +88,7 @@ class OpenDataset(torch.utils.data.Dataset):
 
 if __name__ == "__main__":
     from sklearn.model_selection import train_test_split
+    from torch.utils.data import DataLoader
 
     trn_ids, val_ids = train_test_split(df.ImageID.unique(), test_size=0.2, random_state=99)
     # trn_ids, val_ids = train_test_split(trn_ids, train_size=0.8, random_state=99)
@@ -97,4 +98,12 @@ if __name__ == "__main__":
     train_ds = OpenDataset(trn_df, IMAGE_ROOT)
     test_ds = OpenDataset(val_df, IMAGE_ROOT)
 
-    print(train_ds[0])
+    dl = DataLoader(train_ds, batch_size=2, shuffle=False, num_workers=0, collate_fn=train_ds.collate_fn, pin_memory=False)
+
+    for el in dl:
+        img, box, lbl = el
+        print(img.shape)
+        print(box)
+        print(lbl)
+
+        break
