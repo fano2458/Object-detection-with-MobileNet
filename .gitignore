@@ -1,4 +1,8 @@
 __pycache__
-open-images-bus-trucks/
-dataset/
-*.jpg
+open-images-bus*
+datasets/rdd/Japan/train/labels
+datasets/rdd/Japan/train/images
+datasets/rdd/Japan/train/annotations
+datasets/rdd/Japan/test/*
+# *.jpg
+rdd_dataset.py

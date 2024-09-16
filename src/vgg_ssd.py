@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from utils import *
+from src.utils import *
 import torch.nn.functional as F
 from math import sqrt
 from itertools import product as product
@@ -381,10 +381,3 @@ class SSD300(nn.Module):
         prior_boxes = torch.FloatTensor(prior_boxes).to(self.device)  # (8732, 4)
         prior_boxes.clamp_(0, 1)  # (8732, 4)
         return prior_boxes
-
-
-model = SSD300(3, 'cuda')
-boxes, classes = model(torch.rand(1, 3, 300, 300).cuda())
-
-print(boxes.shape)
-print(classes.shape)
