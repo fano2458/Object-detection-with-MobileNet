@@ -14,9 +14,10 @@ import glob
 from tqdm import tqdm
 
 
-DATA_ROOT = 'dataset/open-images-bus-trucks/'
+# DATA_ROOT = 'dataset/open-images-bus-trucks/'
+DATA_ROOT = 'sample_bus_dataset/'
 IMAGE_ROOT = f'{DATA_ROOT}/images'
-DF_RAW = df = pd.read_csv(f'{DATA_ROOT}/df.csv')
+DF_RAW = df = pd.read_csv(f'{DATA_ROOT}/sample_df.csv')
 
 df = df[df['ImageID'].isin(df['ImageID'].unique().tolist())]
 
@@ -82,8 +83,8 @@ class OpenDataset(torch.utils.data.Dataset):
         return len(self.image_infos)
     
 
-trn_ids, val_ids = train_test_split(df.ImageID.unique(), test_size=0.9, random_state=99)
-trn_ids, val_ids = train_test_split(trn_ids, train_size=0.8, random_state=99)
+trn_ids, val_ids = train_test_split(df.ImageID.unique(), test_size=0.2, random_state=99)
+# trn_ids, val_ids = train_test_split(trn_ids, train_size=0.8, random_state=99)
 trn_df, val_df = df[df['ImageID'].isin(trn_ids)], df[df['ImageID'].isin(val_ids)]
 print(len(trn_df), len(val_df))
 
@@ -91,8 +92,8 @@ print(len(trn_df), len(val_df))
 train_ds = OpenDataset(trn_df)
 test_ds = OpenDataset(val_df)
 
-train_loader = DataLoader(train_ds, batch_size=8, collate_fn=train_ds.collate_fn, drop_last=True, shuffle=True, pin_memory=False)
-test_loader = DataLoader(test_ds, batch_size=8, collate_fn=test_ds.collate_fn, drop_last=True, shuffle=False, pin_memory=False)
+train_loader = DataLoader(train_ds, batch_size=2, collate_fn=train_ds.collate_fn, drop_last=True, shuffle=True, pin_memory=False)
+test_loader = DataLoader(test_ds, batch_size=2, collate_fn=test_ds.collate_fn, drop_last=True, shuffle=False, pin_memory=False)
 
 def train_batch(inputs, model, criterion, optimizer):
     model.train()
