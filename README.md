@@ -13,6 +13,6 @@ This repository contains implementation of MobileNet SSD for object detection on
 | [ ] | Compelete training script | @zakcination, @Default-bit | -- | 30.09.24 |
 | [ ] | Iteratively improve model performance by changing hyperparameters, model architecture (log results) | @zakcination, @Default-bit | -- | 12.10.24 |
 | [ ] | Convert model to ONNX, use quantization, pruning, etc to improve speed of the model. (log results) | @ruslan | @fano2458 | 19.10.24
-| [ ] | Write OpenVINO pipiline for inference on Python and C++. Compare performance | -- | -- | 01.11.24
+| [ ] | Write OpenVINO pipiline for inference on Python and C++. Compare performance | @fano2458 | -- | 01.11.24
 | [ ] | Write iOS application and deploy model there. Measure performance | @dias | -- | 08.11.24
 | [ ] | Write report and make presentation | @all | -- | 15.11.24

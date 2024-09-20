@@ -6,7 +6,7 @@ from torchvision import models
 from torchsummary import summary
 
 from math import sqrt
-from src.utils import *
+from utils import *
 
 
 class MobileNetSSD(nn.Module):
@@ -18,24 +18,24 @@ class MobileNetSSD(nn.Module):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.base_model = models.mobilenet_v3_large(models.MobileNet_V3_Large_Weights.DEFAULT).features
-        self.conv1_1 = nn.Conv2d(960, 512, kernel_size=1, padding=0, bias=False) 
-        self.bn1_1 = nn.BatchNorm2d(512)
-        self.conv1_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv1_1 = nn.Conv2d(960, 128, kernel_size=1, padding=1, bias=False) 
+        self.bn1_1 = nn.BatchNorm2d(128)
+        self.conv1_2 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1_2 = nn.BatchNorm2d(256)
 
-        self.conv2_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0, bias=False)
-        self.bn2_1 = nn.BatchNorm2d(512)
-        self.conv2_2 = nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv2_1 = nn.Conv2d(256, 128, kernel_size=1, padding=1, bias=False)
+        self.bn2_1 = nn.BatchNorm2d(128)
+        self.conv2_2 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn2_2 = nn.BatchNorm2d(256)
 
-        self.conv3_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0, bias=False)
-        self.bn3_1 = nn.BatchNorm2d(512)
-        self.conv3_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0, bias=False)
+        self.conv3_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0, bias=False)
+        self.bn3_1 = nn.BatchNorm2d(128)
+        self.conv3_2 = nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=2, bias=False)
         self.bn3_2 = nn.BatchNorm2d(256)
 
-        self.conv4_1 = nn.Conv2d(256, 512, kernel_size=1, padding=0, bias=False)
-        self.bn4_1 = nn.BatchNorm2d(512)
-        self.conv4_2 = nn.Conv2d(512, 256, kernel_size=3, padding=0, bias=False)
+        self.conv4_1 = nn.Conv2d(256, 128, kernel_size=1, padding=0, bias=False)
+        self.bn4_1 = nn.BatchNorm2d(128)
+        self.conv4_2 = nn.Conv2d(128, 256, kernel_size=3, padding=1, stride=2, bias=False)
         self.bn4_2 = nn.BatchNorm2d(256)
 
         n_boxes = {'base': 4,
@@ -66,41 +66,49 @@ class MobileNetSSD(nn.Module):
     def forward(self, x):
         batch_size = x.shape[0]
         # TODO consider different activations
-        x = self.base_model(x)                      # (B, 960, 20, 20)
+        x = self.base_model(x)                      # (B, 960, 10, 10)
         base_feats = x
-
-        x = F.relu(self.bn1_1(self.conv1_1(x)))                 # (B, 256, 20, 20)
-        x = F.relu(self.bn1_2(self.conv1_2(x)))                 # (B, 256, 10, 10)
+        
+        x = F.relu(self.bn1_1(self.conv1_1(x)))                 # (B, 128, 12, 12)
+        # print(x.shape)
+        x = F.relu(self.bn1_2(self.conv1_2(x)))                 # (B, 256, 6, 6)
         conv1_feats = x
+        # print(x.shape)
 
-        x = F.relu(self.bn2_1(self.conv2_1(x)))                 # (B, 128, 10, 10)
-        x = F.relu(self.bn2_2(self.conv2_2(x)))                 # (B, 256, 5, 5)
+        x = F.relu(self.bn2_1(self.conv2_1(x)))                 # (B, 128, 8, 8)
+        # print(x.shape)           
+        x = F.relu(self.bn2_2(self.conv2_2(x)))                 # (B, 256, 4, 4)
         conv2_feats = x
+        # print(x.shape)
 
-        x = F.relu(self.bn3_1(self.conv3_1(x)))                 # (B, 128, 5, 5)
-        x = F.relu(self.bn3_2(self.conv3_2(x)))                 # (B, 256, 3, 3)
+        x = F.relu(self.bn3_1(self.conv3_1(x)))                 # (B, 128, 4, 4)
+        # print(x.shape)            
+        x = F.relu(self.bn3_2(self.conv3_2(x)))                 # (B, 256, 2, 2)   
         conv3_feats = x
+        # print(x.shape)
 
-        x = F.relu(self.bn4_1(self.conv4_1(x)))                 # (B, 128, 3, 3)
+        x = F.relu(self.bn4_1(self.conv4_1(x)))                 # (B, 128, 2, 2)
+        # print(x.shape)              
         x = F.relu(self.bn4_2(self.conv4_2(x)))                 # (B, 256, 1, 1)
         conv4_feats = x
+        # print(x.shape)
 
         # locations
-        l_base = self.loc_base(base_feats)          # (B, 16, 20, 20)
+        l_base = self.loc_base(base_feats)          
         l_base = l_base.permute(0, 2, 3, 1).contiguous()
-        l_base = l_base.view(batch_size, -1, 4)     # (B, 1600, 4)
+        l_base = l_base.view(batch_size, -1, 4)     
         
-        l_conv1 = self.loc_conv1(conv1_feats)       # (B, 24, 10, 10)
+        l_conv1 = self.loc_conv1(conv1_feats)       
         l_conv1 = l_conv1.permute(0, 2, 3, 1).contiguous()
-        l_conv1 = l_conv1.view(batch_size, -1, 4)   # (B, 600 4)
+        l_conv1 = l_conv1.view(batch_size, -1, 4)   
 
-        l_conv2 = self.loc_conv2(conv2_feats)       # (B, 24, 5, 5)
+        l_conv2 = self.loc_conv2(conv2_feats)       
         l_conv2 = l_conv2.permute(0, 2, 3, 1).contiguous()
-        l_conv2 = l_conv2.view(batch_size, -1, 4)   # (B, 150, 4)
+        l_conv2 = l_conv2.view(batch_size, -1, 4)   
 
-        l_conv3 = self.loc_conv3(conv3_feats)       # (B, 24, 3, 3)
+        l_conv3 = self.loc_conv3(conv3_feats)       
         l_conv3 = l_conv3.permute(0, 2, 3, 1).contiguous()
-        l_conv3 = l_conv3.view(batch_size, -1, 4)   # (B, 54, 4)
+        l_conv3 = l_conv3.view(batch_size, -1, 4)
 
         l_conv4 = self.loc_conv4(conv4_feats)
         l_conv4 = l_conv4.permute(0, 2, 3, 1).contiguous()
@@ -133,10 +141,10 @@ class MobileNetSSD(nn.Module):
         return locs, classes_scores
     
     def create_prior_boxes(self):
-        fmap_dims = {'base': 20,
-                     'conv1': 10,
-                     'conv2': 5,
-                     'conv3': 3,
+        fmap_dims = {'base': 10,
+                     'conv1': 6,
+                     'conv2': 4,
+                     'conv3': 2,
                      'conv4': 1
                     }
 
@@ -421,9 +429,9 @@ class MultiBoxLoss(nn.Module):
 if __name__ == "__main__":
     model = MobileNetSSD(n_classes=1).cuda().eval()
 
-    summary(model, (3, 640, 640))
+    summary(model, (3, 320, 320))
 
-    input = torch.rand([1, 3, 640, 640]).cuda()
+    input = torch.rand([1, 3, 320, 320]).cuda()
 
     with torch.no_grad():
         locs, classes_scores = model(input)
