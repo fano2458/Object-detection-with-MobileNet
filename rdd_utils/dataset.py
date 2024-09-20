@@ -15,8 +15,8 @@ augmentation_pipeline = A.Compose([
 
 
 class RDDDataset(Dataset):
-    IMAGE_WIDTH = 640 
-    IMAGE_HEIGHT = 640 
+    IMAGE_WIDTH = 320 
+    IMAGE_HEIGHT = 320 
     # augmentation object should be passed as argument
     def __init__(self, root_dir, split='train', augment=None):
         self.image_dir = os.path.join(root_dir, split, 'images')

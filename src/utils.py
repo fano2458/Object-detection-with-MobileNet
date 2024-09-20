@@ -26,7 +26,7 @@ def decimate(tensor, m):
 
     return tensor
 
-# def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels, true_difficulties):
+def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels, true_difficulties):
     """
     Calculate the Mean Average Precision (mAP) of detected objects.
 
@@ -241,11 +241,11 @@ def find_jaccard_overlap(set_1, set_2):
     """
 
     # Find intersections
-    intersection = find_intersection(set_1, set_2)  # (n1, n2)
+    intersection = find_intersection(set_1.cuda(), set_2.cuda())  # (n1, n2)
 
     # Find areas of each box in both sets
-    areas_set_1 = (set_1[:, 2] - set_1[:, 0]) * (set_1[:, 3] - set_1[:, 1])  # (n1)
-    areas_set_2 = (set_2[:, 2] - set_2[:, 0]) * (set_2[:, 3] - set_2[:, 1])  # (n2)
+    areas_set_1 = (set_1[:, 2] - set_1[:, 0]) * (set_1[:, 3] - set_1[:, 1]).cuda()  # (n1)
+    areas_set_2 = (set_2[:, 2] - set_2[:, 0]) * (set_2[:, 3] - set_2[:, 1]).cuda()  # (n2)
 
     # Find the union
     # PyTorch auto-broadcasts singleton dimensions
