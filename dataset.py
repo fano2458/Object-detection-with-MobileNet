@@ -39,7 +39,7 @@ def preprocess_image(img):
 
 
 class OpenDataset(torch.utils.data.Dataset):
-    w, h = 640, 640
+    w, h = 320, 320
     def __init__(self, df, image_dir):
         self.image_dir = image_dir
         self.files = glob.glob(self.image_dir+'/*')
@@ -75,7 +75,7 @@ class OpenDataset(torch.utils.data.Dataset):
             img, image_boxes, image_labels = item
             img = preprocess_image(img)[None]
             images.append(img)
-            boxes.append(torch.tensor(image_boxes).float().to(device)/640.)
+            boxes.append(torch.tensor(image_boxes).float().to(device)/320.)
             labels.append(torch.tensor([label2target[c] for c in image_labels]).long().to(device))
         images = torch.cat(images).to(device)
         return images, boxes, labels

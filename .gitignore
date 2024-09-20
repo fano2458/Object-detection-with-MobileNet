@@ -6,3 +6,4 @@ datasets/rdd/Japan/train/annotations
 datasets/rdd/Japan/test/*
 # *.jpg
 rdd_dataset.py
+*.pt

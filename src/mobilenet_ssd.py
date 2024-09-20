@@ -6,12 +6,11 @@ from torchvision import models
 from torchsummary import summary
 
 from math import sqrt
-from utils import *
+from src.utils import *
 
 
 class MobileNetSSD(nn.Module):
     # TODO change everything to power of 2
-    # input size is 640 by 640
     def __init__(self, n_classes):
         super(MobileNetSSD, self).__init__()
         self.n_classes = n_classes
@@ -59,7 +58,7 @@ class MobileNetSSD(nn.Module):
         self.cl_conv3 = nn.Conv2d(256, n_boxes['conv3'] * n_classes, kernel_size=3, padding=1)
         self.cl_conv4 = nn.Conv2d(256, n_boxes['conv4'] * n_classes, kernel_size=3, padding=1)
 
-        self.priors_cxcy = self.create_prior_boxes()
+        self.priors_cxcy = self.create_prior_boxes().cuda()
         # print(self.priors_cxcy.shape)
 
 
