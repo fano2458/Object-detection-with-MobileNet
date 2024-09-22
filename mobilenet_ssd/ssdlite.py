@@ -3,7 +3,41 @@ import torch.nn as nn
 import torch.nn.functional as F
 # from priors import *
 # from backbone import *
-from mobilenet import MobileNetV3_Large
+# from mobilenet import MobileNetV3_Large
+
+
+class hswish(nn.Module):
+    def forward(self, x):
+        out = x * F.relu6(x+3, inplace=True)/6
+        return out
+    
+class hsigmoid(nn.Module):
+    def forward(self, x):
+        out = F.relu6(x+3, inplace=True)/6
+        return out
+
+class relu(nn.Module):
+    def forward(self, x):
+        out = F.relu(x)
+        return out
+
+
+class SeModule(nn.Module):
+    def __init__(self, in_planes, reduction=4):
+        super(SeModule, self).__init__()
+        self.se = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(in_planes, in_planes//reduction, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(in_planes//reduction),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_planes//reduction, in_planes, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(in_planes),
+            hsigmoid()
+        )
+    
+    def forward(self, x):
+        return x * self.se(x)
+
 
 class Block(nn.Module):
     def __init__(self, in_planes, out_planes, stride=1):
@@ -27,6 +61,41 @@ class Block(nn.Module):
         x = self.bn2(x)
         x = F.relu6(x)
         return x
+    
+class MBlock(nn.Module):
+    def __init__(self, kernel_size, in_planes, expand_planes, out_planes, nolinear, semodule, stride):
+        super(MBlock, self).__init__()
+        self.stride = stride
+        self.se = semodule
+        self.conv1 = nn.Conv2d(in_planes, expand_planes, kernel_size=1, stride=1, padding=0)
+        self.bn1 = nn.BatchNorm2d(expand_planes)
+        self.nolinear1 = nolinear
+        self.conv2 = nn.Conv2d(expand_planes, expand_planes, kernel_size=kernel_size, stride=stride, padding=kernel_size//2, groups=expand_planes, bias=False)
+        self.bn2 = nn.BatchNorm2d(expand_planes)
+        self.nolinear2 = nolinear
+        self.conv3 = nn.Conv2d(expand_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn3 = nn.BatchNorm2d(out_planes)
+        self.short_cut = nn.Sequential()
+        #若stride>1说明输出尺寸会变小（下采样），若输入通道数和输出通道数不一致，则需要使用1X1卷积改变维度
+        if stride == 1 and in_planes != out_planes:
+            self.short_cut = nn.Sequential(
+                nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False),
+                nn.BatchNorm2d(out_planes),
+            )
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.nolinear1(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.nolinear2(out)
+        if self.se != None:
+            out = self.se(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = out + self.short_cut(x) if self.stride == 1 else out
+        return out 
 
 class liteConv(nn.Module):
     def __init__(self, in_channels, out_channels, stride):
@@ -192,7 +261,24 @@ class SSDLite(nn.Module):
         self.last_conv = nn.Conv2d(160, 960, kernel_size=1, stride=1, padding=0, bias=False)
         self.last_bn = nn.BatchNorm2d(960)
         self.last_hs = nn.Hardswish(True)
-        self.base_net = MobileNetV3_Large(class_num)
+        # self.base_net = MobileNetV3_Large(class_num)
+        self.bneck = nn.Sequential(
+            MBlock(3, 16, 16, 16, relu(), None, 1),
+            MBlock(3, 16, 64, 24, relu(), None, 2),
+            MBlock(3, 24, 72, 24, relu(), None, 1),
+            MBlock(5, 24, 72, 40, relu(), SeModule(72), 2),
+            MBlock(5, 40, 120, 40, relu(), SeModule(120), 1),
+            MBlock(5, 40, 120, 40, relu(), SeModule(120), 1),
+            MBlock(3, 40, 240, 80, hswish(), None, 2),
+            MBlock(3, 80, 200, 80, hswish(), None, 1),
+            MBlock(3, 80, 184, 80, hswish(), None, 1),
+            MBlock(3, 80, 184, 80, hswish(), None, 1),
+            MBlock(3, 80, 480, 112, hswish(), SeModule(480), 1),
+            MBlock(3, 112, 672, 112, hswish(), SeModule(672), 1),
+            MBlock(5, 112, 672, 160, hswish(), SeModule(672), 2),
+            MBlock(5, 160, 960, 160, hswish(), SeModule(960), 1),
+            MBlock(5, 160, 960, 160, hswish(), SeModule(960), 1),
+        )
 
         self.aux_net = AuxillaryConvolutions(backbone=self.backbone)
         self.prediction_net = PredictionConvolutions(class_num=self.class_num, backbone=self.backbone)
@@ -201,7 +287,7 @@ class SSDLite(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.hs1(x)
-        for index, feat in enumerate(self.base_net.bneck):
+        for index, feat in enumerate(self.bneck):
             x = feat(x)
             if index == 10:
                 features_19x19 = x
@@ -222,6 +308,6 @@ from torchsummary import summary
 
 if __name__ == '__main__':
 
-    model = SSDLite(class_num=4, backbone='MobileNetV3_Large', device='cuda').cuda()
+    model = SSDLite(class_num=2, backbone='MobileNetV3_Large', device='cuda').cuda()
     summary(model, (3, 300, 300))
     
