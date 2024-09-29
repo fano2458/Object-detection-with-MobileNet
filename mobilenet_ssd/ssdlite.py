@@ -1,9 +1,75 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# from priors import *
-# from backbone import *
-# from mobilenet import MobileNetV3_Large
+
+from typing import List
+import collections
+import itertools
+import math
+
+
+SSDBoxSizes = collections.namedtuple('SSDBoxSizes', ['min', 'max'])
+SSDSpec = collections.namedtuple('SSDSpec', ['feature_map_size', 'shrinkage', 'box_sizes', 'aspect_ratios'])
+
+
+def generate_ssd_priors(specs: List[SSDSpec], image_size, clamp=True) -> torch.Tensor:
+    priors = []
+    for spec in specs:
+        scale = image_size / spec.shrinkage
+        for j, i in itertools.product(range(spec.feature_map_size), repeat=2):
+            x_center = (i + 0.5) / scale
+            y_center = (j + 0.5) / scale
+
+            size = spec.box_sizes.min
+            h = w = size / image_size
+            priors.append([
+                x_center,
+                y_center,
+                w,
+                h
+            ])
+
+            size = math.sqrt(spec.box_sizes.max * spec.box_sizes.max)
+            h = w = size / image_size
+            priors.append([
+                x_center,
+                y_center,
+                w,
+                h
+            ])
+        
+            size = spec.box_sizes.min
+            h = w = size / image_size
+            for ratio in spec.aspect_ratios:
+                ratio = math.sqrt(ratio)
+                priors.append([
+                    x_center,
+                    y_center,
+                    w * ratio,
+                    h / ratio
+                ])
+                priors.append([
+                    x_center,
+                    y_center,
+                    w / ratio,
+                    h * ratio
+                ])
+
+    priors =  torch.tensor(priors)
+    if clamp:
+        torch.clamp(priors, 0.0, 1.0, out=priors)
+    return priors
+
+image_size = 300
+
+mobilenet_specs = [
+    SSDSpec(19, 16, SSDBoxSizes(60, 105), [2]),
+    SSDSpec(10, 32, SSDBoxSizes(105, 150), [2, 3]),
+    SSDSpec(5, 64, SSDBoxSizes(150, 195), [2, 3]),
+    SSDSpec(3, 100, SSDBoxSizes(195, 240), [2, 3]),
+    SSDSpec(2, 150, SSDBoxSizes(240, 285), [2]),
+    SSDSpec(1, 300, SSDBoxSizes(285, 330), [2])
+]
 
 
 class hswish(nn.Module):
@@ -76,7 +142,7 @@ class MBlock(nn.Module):
         self.conv3 = nn.Conv2d(expand_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn3 = nn.BatchNorm2d(out_planes)
         self.short_cut = nn.Sequential()
-        #若stride>1说明输出尺寸会变小（下采样），若输入通道数和输出通道数不一致，则需要使用1X1卷积改变维度
+
         if stride == 1 and in_planes != out_planes:
             self.short_cut = nn.Sequential(
                 nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False),
@@ -251,9 +317,9 @@ class SSDLite(nn.Module):
         self.class_num = class_num
         self.backbone = backbone
         
-        # priors = generate_ssd_priors(mobilenet_specs, image_size)
+        priors = generate_ssd_priors(mobilenet_specs, image_size)
 
-        # self.priors = torch.FloatTensor(priors).to(device)
+        self.priors = torch.FloatTensor(priors).to(device)
 
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
